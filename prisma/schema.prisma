@@ -1,0 +1,238 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum PartnerTier {
+  UNGGULAN
+  REGULER
+  PERLU_PERHATIAN
+  TIDAK_AKTIF
+}
+
+enum PartnerStatus {
+  ACTIVE
+  SUSPENDED
+  INACTIVE
+}
+
+enum OutletStatus {
+  ACTIVE
+  ATTENTION
+  INACTIVE
+  CANDIDATE
+}
+
+enum FeasibilityStatus {
+  LAYAK
+  TIDAK_LAYAK
+  PERLU_REVIEW
+}
+
+enum ApplicationWorkflowStatus {
+  DRAFT
+  SUBMITTED
+  LOCATION_CHECKED
+  REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum OrderStatus {
+  COMPLETED
+  PROCESSING
+  CANCELLED
+  FAILED
+}
+
+model Organization {
+  id             String          @id @default(cuid())
+  name           String
+  code           String          @unique
+  brands         Brand[]
+  partners       Partner[]
+  territoryRules TerritoryRule[]
+  auditLogs      AuditLog[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model Brand {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  code           String       @unique
+  primaryColor   String       @default("#71379B")
+  deepColor      String       @default("#29183B")
+  outlets        Outlet[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model Partner {
+  id               String               @id @default(cuid())
+  organizationId   String
+  organization     Organization         @relation(fields: [organizationId], references: [id])
+  ownerName        String
+  email            String               @unique
+  phone            String
+  identityNumber   String?
+  tier             PartnerTier          @default(REGULER)
+  status           PartnerStatus        @default(ACTIVE)
+  joinedAt         DateTime             @default(now())
+  outlets          Outlet[]
+  applications     PartnerApplication[]
+  purchaseOrders   PurchaseOrder[]
+  performance      PartnerPerformance?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  @@index([organizationId])
+  @@index([status])
+}
+
+model Outlet {
+  id              String          @id @default(cuid())
+  partnerId       String
+  partner         Partner         @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  brandId         String
+  brand           Brand           @relation(fields: [brandId], references: [id])
+  name            String
+  address         String
+  city            String
+  district        String
+  latitude        Float
+  longitude       Float
+  operationalDate DateTime        @default(now())
+  status          OutletStatus    @default(ACTIVE)
+  purchaseOrders  PurchaseOrder[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([partnerId])
+  @@index([status])
+  @@index([city])
+}
+
+model PartnerApplication {
+  id                         String                    @id @default(cuid())
+  partnerId                  String?
+  partner                    Partner?                  @relation(fields: [partnerId], references: [id])
+  applicantName              String
+  applicantPhone             String
+  proposedOutletName         String
+  proposedAddress            String
+  latitude                   Float
+  longitude                  Float
+  minimumRadiusKm            Float                     @default(3.0)
+  feasibilityStatus          FeasibilityStatus         @default(PERLU_REVIEW)
+  nearestOutletDistanceMeters Float?
+  conflictingOutletIds       String[]
+  workflowStatus             ApplicationWorkflowStatus @default(DRAFT)
+  reviewerNotes              String?
+  reviewedBy                 String?
+  reviewedAt                 DateTime?
+  createdAt                  DateTime                  @default(now())
+  updatedAt                  DateTime                  @updatedAt
+
+  @@index([workflowStatus])
+  @@index([feasibilityStatus])
+}
+
+model TerritoryRule {
+  id                 String       @id @default(cuid())
+  organizationId     String
+  organization       Organization @relation(fields: [organizationId], references: [id])
+  city               String       @default("ALL")
+  protectionRadiusKm Float        @default(3.0)
+  allowException     Boolean      @default(true)
+  active             Boolean      @default(true)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@index([organizationId])
+}
+
+model PurchaseOrder {
+  id            String              @id @default(cuid())
+  partnerId     String
+  partner       Partner             @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  outletId      String?
+  outlet        Outlet?             @relation(fields: [outletId], references: [id])
+  orderDate     DateTime            @default(now())
+  totalAmount   Float
+  orderStatus   OrderStatus         @default(COMPLETED)
+  isFirstOrder  Boolean             @default(false)
+  isRepeatOrder Boolean             @default(false)
+  notes         String?
+  items         PurchaseOrderItem[]
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@index([partnerId])
+  @@index([orderStatus])
+  @@index([orderDate])
+}
+
+model PurchaseOrderItem {
+  id          String        @id @default(cuid())
+  orderId     String
+  order       PurchaseOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productName String
+  sku         String?
+  quantity    Int
+  unitPrice   Float
+  subtotal    Float
+
+  @@index([orderId])
+}
+
+model PartnerPerformance {
+  id                  String      @id @default(cuid())
+  partnerId           String      @unique
+  partner             Partner     @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  totalSpend          Float       @default(0)
+  totalOrders         Int         @default(0)
+  repeatOrderCount    Int         @default(0)
+  averageOrderValue   Float       @default(0)
+  firstOrderAt        DateTime?
+  lastOrderAt         DateTime?
+  daysSinceLastOrder  Int         @default(0)
+  orderIntervalDays   Float       @default(0)
+  performanceScore    Float       @default(0)
+  category            PartnerTier @default(REGULER)
+  updatedAt           DateTime    @updatedAt
+}
+
+model AuditLog {
+  id             String        @id @default(cuid())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  action         String
+  entityType     String
+  entityId       String
+  actorName      String
+  details        String?
+  createdAt      DateTime      @default(now())
+
+  @@index([entityType, entityId])
+}
+
+model MapSettings {
+  id                     String   @id @default(cuid())
+  mapProvider            String   @default("openfreemap")
+  mapStyleUrl            String   @default("https://tiles.openfreemap.org/styles/liberty")
+  defaultLat             Float    @default(-7.5755)
+  defaultLng             Float    @default(110.8243)
+  defaultZoom            Int      @default(11)
+  defaultRadiusKm        Float    @default(3.0)
+  enableClustering       Boolean  @default(true)
+  geocodingProvider      String   @default("geoapify")
+  geocodingDailyBudget   Int      @default(2500)
+  updatedAt              DateTime @updatedAt
+}
