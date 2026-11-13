@@ -112,3 +112,33 @@ body {
 .selected-marker-pulse {
   animation: marker-pulse 1.8s infinite;
 }
+
+/* Thermal Printer & Receipt Print Styles (58mm / 80mm) */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .receipt-printable,
+  .receipt-printable * {
+    visibility: visible;
+  }
+  .receipt-printable {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    max-width: 80mm !important;
+    margin: 0 auto !important;
+    padding: 8px !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-family: monospace !important;
+    font-size: 12px !important;
+    line-height: 1.3 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

@@ -1,3 +1,4 @@
+export type UserRole = 'ADMIN_HQ' | 'MITRA';
 export type PartnerTier = 'UNGGULAN' | 'REGULER' | 'PERLU_PERHATIAN' | 'TIDAK_AKTIF';
 export type PartnerStatus = 'ACTIVE' | 'SUSPENDED' | 'INACTIVE';
 export type OutletStatus = 'ACTIVE' | 'ATTENTION' | 'INACTIVE' | 'CANDIDATE';
@@ -10,6 +11,154 @@ export type ApplicationWorkflowStatus =
   | 'APPROVED'
   | 'REJECTED';
 export type OrderStatus = 'COMPLETED' | 'PROCESSING' | 'CANCELLED' | 'FAILED';
+
+export interface SessionUser {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: UserRole;
+  partnerId?: string;
+  tier?: PartnerTier;
+}
+
+export interface WholesaleProduct {
+  sku: string;
+  name: string;
+  category: 'BAHAN_BAKU' | 'KEMASAN' | 'PERALATAN';
+  unit: string;
+  unitPrice: number;
+  minOrderQty: number;
+  description: string;
+}
+
+export type PosPaymentMethod = 'TUNAI' | 'QRIS' | 'TRANSFER';
+export type PosMenuCategory = 'ORIGINAL_TEA' | 'FRUIT_TEA' | 'MILK_TEA' | 'TOPPING';
+export type BookkeepingEntryType = 'INCOME' | 'EXPENSE';
+export type BookkeepingCategory =
+  | 'PENJUALAN_POS'
+  | 'BAHAN_BAKU_LOKAL'
+  | 'OPERASIONAL_GERAI'
+  | 'GAJI_KARYAWAN'
+  | 'LAINNYA';
+
+export type StoreShiftStatus = 'OPEN' | 'CLOSED';
+
+export interface StoreShift {
+  id: string;
+  partnerId: string;
+  outletId: string;
+  outletName: string;
+  cashierName: string;
+  openedAt: string;
+  closedAt?: string;
+  status: StoreShiftStatus;
+  initialCash: number; // Kas modal awal di laci
+  totalSalesCash: number; // Total penjualan tunai selama shift
+  totalSalesQris: number; // Total penjualan QRIS selama shift
+  totalSalesTransfer: number; // Total penjualan Transfer selama shift
+  totalCupsSold: number;
+  totalTransactionCount: number;
+  totalExpensesCash: number; // Pengeluaran kas laci selama shift
+  expectedCashInDrawer: number; // initialCash + totalSalesCash - totalExpensesCash
+  actualCashInDrawer?: number; // Kas riil saat tutup toko
+  cashDifference?: number; // actualCashInDrawer - expectedCashInDrawer (selisih lebih/kurang)
+  notes?: string;
+}
+
+export interface PosMenuItem {
+  code: string;
+  name: string;
+  category: PosMenuCategory;
+  cupSize: '18oz' | '22oz' | 'ADDON';
+  sellingPrice: number;
+  estimatedCogs: number; // HPP per cup/porsi
+}
+
+export interface PosTransactionItem {
+  id: string;
+  transactionId: string;
+  menuCode: string;
+  menuName: string;
+  quantity: number;
+  unitPrice: number;
+  unitCogs: number;
+  subtotal: number;
+  subtotalCogs: number;
+}
+
+export interface PosTransaction {
+  id: string;
+  shiftId?: string;
+  partnerId: string;
+  outletId: string;
+  outletName: string;
+  cashierName: string;
+  customerName?: string;
+  paymentMethod: PosPaymentMethod;
+  totalCups: number;
+  subtotalAmount: number;
+  discountAmount: number;
+  totalAmount: number;
+  estimatedCost: number;
+  grossProfit: number;
+  amountPaid: number;
+  changeAmount: number;
+  notes?: string;
+  createdAt: string;
+  items: PosTransactionItem[];
+}
+
+export interface BookkeepingEntry {
+  id: string;
+  partnerId: string;
+  outletId: string;
+  outletName: string;
+  entryDate: string;
+  type: BookkeepingEntryType;
+  category: BookkeepingCategory;
+  description: string;
+  amount: number;
+  paymentMethod: PosPaymentMethod;
+  referenceId?: string;
+}
+
+export interface MitraBookkeepingSummary {
+  totalTransactions: number;
+  totalCupsSold: number;
+  totalRevenue: number;
+  totalEstimatedCogs: number;
+  totalGrossProfit: number;
+  totalOperationalExpenses: number;
+  totalManualIncome: number;
+  totalB2BWholesaleSpend: number;
+  netOperatingProfit: number;
+  paymentBreakdown: {
+    TUNAI: number;
+    QRIS: number;
+    TRANSFER: number;
+  };
+}
+
+export interface MitraPosAndBookkeepingData {
+  partner: Partner;
+  outlets: Outlet[];
+  currentShift: StoreShift | null;
+  shiftHistory: StoreShift[];
+  menuItems: PosMenuItem[];
+  transactions: PosTransaction[];
+  bookkeepingEntries: BookkeepingEntry[];
+  summary: MitraBookkeepingSummary;
+}
+
+export interface MitraDashboardData {
+  partner: Partner;
+  outlets: Outlet[];
+  purchases: PurchaseOrder[];
+  applications: PartnerApplication[];
+  catalog: WholesaleProduct[];
+  posSummary?: MitraBookkeepingSummary;
+}
 
 export interface PurchaseOrderItem {
   id: string;

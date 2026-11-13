@@ -49,6 +49,28 @@ enum OrderStatus {
   FAILED
 }
 
+enum UserRole {
+  ADMIN_HQ
+  MITRA
+}
+
+model UserAccount {
+  id             String       @id @default(cuid())
+  email          String       @unique
+  phone          String       @unique
+  passwordHash   String
+  name           String
+  role           UserRole     @default(MITRA)
+  partnerId      String?      @unique
+  partner        Partner?     @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  active         Boolean      @default(true)
+  lastLoginAt    DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([role])
+}
+
 model Organization {
   id             String          @id @default(cuid())
   name           String
@@ -89,6 +111,7 @@ model Partner {
   applications     PartnerApplication[]
   purchaseOrders   PurchaseOrder[]
   performance      PartnerPerformance?
+  userAccount      UserAccount?
   createdAt        DateTime             @default(now())
   updatedAt        DateTime             @updatedAt
 
@@ -235,4 +258,85 @@ model MapSettings {
   geocodingProvider      String   @default("geoapify")
   geocodingDailyBudget   Int      @default(2500)
   updatedAt              DateTime @updatedAt
+}
+
+model StoreShift {
+  id                   String    @id @default(cuid())
+  partnerId            String
+  outletId             String
+  cashierName          String
+  openedAt             DateTime  @default(now())
+  closedAt             DateTime?
+  status               String    @default("OPEN") // OPEN | CLOSED
+  initialCash          Float     @default(0)
+  totalSalesCash       Float     @default(0)
+  totalSalesQris       Float     @default(0)
+  totalSalesTransfer   Float     @default(0)
+  totalCupsSold        Int       @default(0)
+  totalTransactionCount Int      @default(0)
+  totalExpensesCash    Float     @default(0)
+  expectedCashInDrawer Float     @default(0)
+  actualCashInDrawer   Float?
+  cashDifference       Float?
+  notes                String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([partnerId, outletId])
+  @@index([status])
+}
+
+model PosTransaction {
+  id             String               @id @default(cuid())
+  partnerId      String
+  outletId       String
+  cashierName    String
+  customerName   String?
+  paymentMethod  String               @default("TUNAI")
+  totalCups      Int
+  subtotalAmount Float
+  discountAmount Float                @default(0)
+  totalAmount    Float
+  estimatedCost  Float                @default(0)
+  grossProfit    Float                @default(0)
+  amountPaid     Float
+  changeAmount   Float                @default(0)
+  notes          String?
+  createdAt      DateTime             @default(now())
+  items          PosTransactionItem[]
+
+  @@index([partnerId, outletId])
+  @@index([createdAt])
+}
+
+model PosTransactionItem {
+  id            String         @id @default(cuid())
+  transactionId String
+  transaction   PosTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  menuCode      String
+  menuName      String
+  quantity      Int
+  unitPrice     Float
+  unitCogs      Float          @default(0)
+  subtotal      Float
+  subtotalCogs  Float          @default(0)
+
+  @@index([transactionId])
+}
+
+model BookkeepingEntry {
+  id            String   @id @default(cuid())
+  partnerId     String
+  outletId      String
+  entryDate     DateTime @default(now())
+  type          String   // INCOME | EXPENSE
+  category      String
+  description   String
+  amount        Float
+  paymentMethod String   @default("TUNAI")
+  referenceId   String?
+  createdAt     DateTime @default(now())
+
+  @@index([partnerId, outletId])
+  @@index([entryDate])
 }

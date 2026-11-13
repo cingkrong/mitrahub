@@ -1,11 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DataStore } from '@/lib/data-store';
+import { SESSION_COOKIE_NAME, verifySessionToken } from '@/lib/auth';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+    const sessionUser = verifySessionToken(token);
+
+    if (sessionUser?.role === 'MITRA') {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Akses ditolak. Hanya Admin Kantor Pusat (HQ) yang berwenang menyetujui pengajuan lokasi.',
+        },
+        { status: 403 }
+      );
+    }
+
     const { id } = await params;
     const body = await request.json().catch(() => ({}));
     const { reviewerName = 'Admin HQ Melatea', notes } = body;
